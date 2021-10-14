@@ -129,8 +129,8 @@ public final class Builder {
                 .setChannelId(options.getChannel()).setContentTitle(options.getTitle())
                 .setContentText(options.getText()).setTicker(options.getText()).setNumber(options.getNumber())
                 .setAutoCancel(options.isAutoClear()).setOngoing(options.isSticky()).setColor(options.getColor())
-                .setVisibility(options.getVisibility()).setPriority(options.getPriority())
-                .setShowWhen(options.getShowWhen()).setUsesChronometer(options.isWithProgressBar())
+                .setVisibility(options.getVisibility()).setPriority(options.getPrio())
+                .setShowWhen(options.showClock()).setUsesChronometer(options.isWithProgressBar())
                 .setGroup(options.getGroup()).setGroupSummary(options.getGroupSummary())
                 .setLights(options.getLedColor(), options.getLedOn(), options.getLedOff());
 
