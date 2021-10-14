@@ -27,25 +27,21 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationCompat.MessagingStyle.Message;
-import android.support.v4.media.app.NotificationCompat.MediaStyle;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationCompat.MessagingStyle.Message;
+import androidx.media.app.NotificationCompat.MediaStyle;
 import android.support.v4.media.session.MediaSessionCompat;
-import android.graphics.Color;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
-import android.graphics.Rect;
-import android.graphics.RectF;
-import android.graphics.Paint;
-import android.graphics.Canvas;
 
 import java.util.List;
 import java.util.Random;
 
 import de.appplant.cordova.plugin.notification.action.Action;
 
+import static android.app.PendingIntent.FLAG_CANCEL_CURRENT;
 import static android.app.PendingIntent.FLAG_UPDATE_CURRENT;
+import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static de.appplant.cordova.plugin.notification.Notification.EXTRA_UPDATE;
+import android.os.Build;
 
 /**
  * Builder class for local notifications. Build fully configured local
@@ -123,31 +119,19 @@ public final class Builder {
             return new Notification(context, options);
         }
 
-        Uri sound     = options.getSound();
+        Uri sound = options.getSound();
         Bundle extras = new Bundle();
 
         extras.putInt(Notification.EXTRA_ID, options.getId());
         extras.putString(Options.EXTRA_SOUND, sound.toString());
 
-        builder = findOrCreateBuilder()
-                .setDefaults(options.getDefaults())
-                .setExtras(extras)
-                .setOnlyAlertOnce(false)
-                .setChannelId(options.getChannel())
-                .setContentTitle(options.getTitle())
-                .setContentText(options.getText())
-                .setTicker(options.getText())
-                .setNumber(options.getNumber())
-                .setAutoCancel(options.isAutoClear())
-                .setOngoing(options.isSticky())
-                .setColor(options.getColor())
-                .setVisibility(options.getVisibility())
-                .setPriority(options.getPrio())
-                .setShowWhen(options.showClock())
-                .setUsesChronometer(options.showChronometer())
-                .setGroup(options.getGroup())
-                .setGroupSummary(options.getGroupSummary())
-                .setTimeoutAfter(options.getTimeout())
+        builder = findOrCreateBuilder().setDefaults(options.getDefaults()).setExtras(extras).setOnlyAlertOnce(false)
+                .setChannelId(options.getChannel()).setContentTitle(options.getTitle())
+                .setContentText(options.getText()).setTicker(options.getText()).setNumber(options.getNumber())
+                .setAutoCancel(options.isAutoClear()).setOngoing(options.isSticky()).setColor(options.getColor())
+                .setVisibility(options.getVisibility()).setPriority(options.getPriority())
+                .setShowWhen(options.getShowWhen()).setUsesChronometer(options.isWithProgressBar())
+                .setGroup(options.getGroup()).setGroupSummary(options.getGroupSummary())
                 .setLights(options.getLedColor(), options.getLedOn(), options.getLedOff());
 
         if (sound != Uri.EMPTY && !isUpdate()) {
@@ -155,22 +139,13 @@ public final class Builder {
         }
 
         if (options.isWithProgressBar()) {
-            builder.setProgress(
-                    options.getProgressMaxValue(),
-                    options.getProgressValue(),
+            builder.setProgress(options.getProgressMaxValue(), options.getProgressValue(),
                     options.isIndeterminateProgress());
         }
 
         if (options.hasLargeIcon()) {
             builder.setSmallIcon(options.getSmallIcon());
-
-            Bitmap largeIcon = options.getLargeIcon();
-
-            if (options.getLargeIconType().equals("circle")) {
-                largeIcon = getCircleBitmap(largeIcon);
-            }
-
-            builder.setLargeIcon(largeIcon);
+            builder.setLargeIcon(options.getLargeIcon());
         } else {
             builder.setSmallIcon(options.getSmallIcon());
         }
@@ -184,49 +159,13 @@ public final class Builder {
     }
 
     /**
-     * Convert a bitmap to a circular bitmap.
-     * This code has been extracted from the Phonegap Plugin Push plugin:
-     * https://github.com/phonegap/phonegap-plugin-push
-     *
-     * @param bitmap Bitmap to convert.
-     * @return Circular bitmap.
-     */
-    private Bitmap getCircleBitmap(Bitmap bitmap) {
-        if (bitmap == null) {
-            return null;
-        }
-
-        final Bitmap output = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
-        final Canvas canvas = new Canvas(output);
-        final int color = Color.RED;
-        final Paint paint = new Paint();
-        final Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
-        final RectF rectF = new RectF(rect);
-
-        paint.setAntiAlias(true);
-        canvas.drawARGB(0, 0, 0, 0);
-        paint.setColor(color);
-        float cx = bitmap.getWidth() / 2;
-        float cy = bitmap.getHeight() / 2;
-        float radius = cx < cy ? cx : cy;
-        canvas.drawCircle(cx, cy, radius, paint);
-
-        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-        canvas.drawBitmap(bitmap, rect, rect, paint);
-
-        bitmap.recycle();
-
-        return output;
-    }
-
-    /**
      * Find out and set the notification style.
      *
      * @param builder Local notification builder instance.
      */
     private void applyStyle(NotificationCompat.Builder builder) {
         Message[] messages = options.getMessages();
-        String summary     = options.getSummary();
+        String summary = options.getSummary();
 
         if (messages != null) {
             applyMessagingStyle(builder, messages);
@@ -266,13 +205,11 @@ public final class Builder {
      * @param builder  Local notification builder instance.
      * @param messages The messages to add to the conversation.
      */
-    private void applyMessagingStyle(NotificationCompat.Builder builder,
-                                     Message[] messages) {
+    private void applyMessagingStyle(NotificationCompat.Builder builder, Message[] messages) {
 
         NotificationCompat.MessagingStyle style;
 
-        style = new NotificationCompat.MessagingStyle("Me")
-                .setConversationTitle(options.getTitle());
+        style = new NotificationCompat.MessagingStyle("Me").setConversationTitle(options.getTitle());
 
         for (Message msg : messages) {
             style.addMessage(msg);
@@ -287,15 +224,13 @@ public final class Builder {
      * @param builder Local notification builder instance.
      * @param pics    The pictures to show.
      */
-    private void applyBigPictureStyle(NotificationCompat.Builder builder,
-                                      List<Bitmap> pics) {
+    private void applyBigPictureStyle(NotificationCompat.Builder builder, List<Bitmap> pics) {
 
         NotificationCompat.BigPictureStyle style;
         String summary = options.getSummary();
-        String text    = options.getText();
+        String text = options.getText();
 
-        style = new NotificationCompat.BigPictureStyle(builder)
-                .setSummaryText(summary == null ? text : summary)
+        style = new NotificationCompat.BigPictureStyle(builder).setSummaryText(summary == null ? text : summary)
                 .bigPicture(pics.get(0));
 
         builder.setStyle(style);
@@ -310,8 +245,7 @@ public final class Builder {
         NotificationCompat.InboxStyle style;
         String text = options.getText();
 
-        style = new NotificationCompat.InboxStyle(builder)
-                .setSummaryText(options.getSummary());
+        style = new NotificationCompat.InboxStyle(builder).setSummaryText(options.getSummary());
 
         for (String line : text.split("\n")) {
             style.addLine(line);
@@ -328,8 +262,7 @@ public final class Builder {
     private void applyBigTextStyle(NotificationCompat.Builder builder) {
         NotificationCompat.BigTextStyle style;
 
-        style = new NotificationCompat.BigTextStyle(builder)
-                .setSummaryText(options.getSummary())
+        style = new NotificationCompat.BigTextStyle(builder).setSummaryText(options.getSummary())
                 .bigText(options.getText());
 
         builder.setStyle(style);
@@ -341,13 +274,10 @@ public final class Builder {
      * @param builder Local notification builder instance.
      * @param token   The media session token.
      */
-    private void applyMediaStyle(NotificationCompat.Builder builder,
-                                 MediaSessionCompat.Token token) {
+    private void applyMediaStyle(NotificationCompat.Builder builder, MediaSessionCompat.Token token) {
         MediaStyle style;
 
-        style = new MediaStyle(builder)
-                .setMediaSession(token)
-                .setShowActionsInCompactView(1);
+        style = new MediaStyle(builder).setMediaSession(token).setShowActionsInCompactView(1);
 
         builder.setStyle(style);
     }
@@ -363,25 +293,19 @@ public final class Builder {
         if (clearReceiver == null)
             return;
 
-        Intent intent = new Intent(context, clearReceiver)
-                .setAction(options.getIdentifier())
+        Intent intent = new Intent(context, clearReceiver).putExtras(extras).setAction(options.getIdentifier())
                 .putExtra(Notification.EXTRA_ID, options.getId());
-
-        if (extras != null) {
-            intent.putExtras(extras);
-        }
 
         int reqCode = random.nextInt();
 
-        PendingIntent deleteIntent = PendingIntent.getBroadcast(
-                context, reqCode, intent, FLAG_UPDATE_CURRENT);
+        PendingIntent deleteIntent = PendingIntent.getBroadcast(context, reqCode, intent,
+                Build.VERSION.SDK_INT > 30 ? FLAG_IMMUTABLE : FLAG_UPDATE_CURRENT);
 
         builder.setDeleteIntent(deleteIntent);
     }
 
     /**
-     * Set intent to handle the click event. Will bring the app to
-     * foreground.
+     * Set intent to handle the click event. Will bring the app to foreground.
      *
      * @param builder Local notification builder instance.
      */
@@ -390,20 +314,14 @@ public final class Builder {
         if (clickActivity == null)
             return;
 
-        Intent intent = new Intent(context, clickActivity)
-                .putExtra(Notification.EXTRA_ID, options.getId())
-                .putExtra(Action.EXTRA_ID, Action.CLICK_ACTION_ID)
-                .putExtra(Options.EXTRA_LAUNCH, options.isLaunchingApp())
-                .setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-
-        if (extras != null) {
-            intent.putExtras(extras);
-        }
+        Intent intent = new Intent(context, clickActivity).putExtras(extras)
+                .putExtra(Notification.EXTRA_ID, options.getId()).putExtra(Action.EXTRA_ID, Action.CLICK_ACTION_ID)
+                .putExtra(Options.EXTRA_LAUNCH, options.isLaunchingApp()).setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
 
         int reqCode = random.nextInt();
 
-        PendingIntent contentIntent = PendingIntent.getService(
-                context, reqCode, intent, FLAG_UPDATE_CURRENT);
+        PendingIntent contentIntent = PendingIntent.getActivity(context, reqCode, intent,
+                Build.VERSION.SDK_INT > 30 ? FLAG_IMMUTABLE : FLAG_UPDATE_CURRENT);
 
         builder.setContentIntent(contentIntent);
     }
@@ -413,7 +331,7 @@ public final class Builder {
      *
      * @param builder Local notification builder instance.
      */
-    private void applyActions (NotificationCompat.Builder builder) {
+    private void applyActions(NotificationCompat.Builder builder) {
         Action[] actions = options.getActions();
         NotificationCompat.Action.Builder btn;
 
@@ -421,9 +339,8 @@ public final class Builder {
             return;
 
         for (Action action : actions) {
-             btn = new NotificationCompat.Action.Builder(
-                     action.getIcon(), action.getTitle(),
-                     getPendingIntentForAction(action));
+            btn = new NotificationCompat.Action.Builder(action.getIcon(), action.getTitle(),
+                    getPendingIntentForAction(action));
 
             if (action.isWithInput()) {
                 btn.addRemoteInput(action.getInput());
@@ -434,26 +351,20 @@ public final class Builder {
     }
 
     /**
-     * Returns a new PendingIntent for a notification action, including the
-     * action's identifier.
+     * Returns a new PendingIntent for a notification action, including the action's
+     * identifier.
      *
      * @param action Notification action needing the PendingIntent
      */
-    private PendingIntent getPendingIntentForAction (Action action) {
-        Intent intent = new Intent(context, clickActivity)
-                .putExtra(Notification.EXTRA_ID, options.getId())
-                .putExtra(Action.EXTRA_ID, action.getId())
-                .putExtra(Options.EXTRA_LAUNCH, action.isLaunchingApp())
-                .setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-
-        if (extras != null) {
-            intent.putExtras(extras);
-        }
+    private PendingIntent getPendingIntentForAction(Action action) {
+        Intent intent = new Intent(context, clickActivity).putExtras(extras)
+                .putExtra(Notification.EXTRA_ID, options.getId()).putExtra(Action.EXTRA_ID, action.getId())
+                .putExtra(Options.EXTRA_LAUNCH, action.isLaunchingApp()).setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
 
         int reqCode = random.nextInt();
 
-        return PendingIntent.getService(
-                context, reqCode, intent, FLAG_UPDATE_CURRENT);
+        return PendingIntent.getActivity(context, reqCode, intent,
+                Build.VERSION.SDK_INT > 30 ? FLAG_IMMUTABLE : FLAG_CANCEL_CURRENT);
     }
 
     /**
