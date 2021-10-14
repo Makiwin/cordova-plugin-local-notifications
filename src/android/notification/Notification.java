@@ -53,6 +53,8 @@ import static android.os.Build.VERSION.SDK_INT;
 import static android.os.Build.VERSION_CODES.M;
 import static androidx.core.app.NotificationManagerCompat.IMPORTANCE_MAX;
 import static androidx.core.app.NotificationManagerCompat.IMPORTANCE_MIN;
+import static androidx.core.app.NotificationManagerCompat.IMPORTANCE_HIGH;
+
 
 /**
  * Wrapper class around OS notification class. Handles basic operations like
@@ -138,8 +140,12 @@ public final class Notification {
     /**
      * If it's a repeating notification.
      */
-    private boolean isRepeating() {
+    public boolean isRepeating() {
         return getOptions().getTrigger().has("every");
+    }
+
+    public boolean isHighPrio() {
+      return getOptions().getPrio() >= IMPORTANCE_HIGH;
     }
 
     /**
@@ -210,7 +216,7 @@ public final class Notification {
                     Build.VERSION.SDK_INT > 30 ? FLAG_IMMUTABLE : FLAG_CANCEL_CURRENT);
 
             try {
-                switch (options.getPriority()) {
+                switch (options.getPrio()) {
                     case IMPORTANCE_MIN:
                         mgr.setExact(RTC, time, pi);
                         break;
